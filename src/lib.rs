@@ -1,0 +1,98 @@
+mod event;
+pub mod frame_data;
+pub mod gimslib;
+pub mod running_state;
+pub mod swapchain;
+
+use std::cell::OnceCell;
+
+use windows::Win32::{Foundation::RECT, Graphics::Direct3D12::*};
+use winit::{event::WindowEvent, event_loop::EventLoop, window::WindowAttributes};
+
+use frame_data::FrameData;
+use gimslib::Lib;
+use running_state::RunningState;
+
+pub struct FrameResources<'a> {
+    pub command_list: &'a ID3D12GraphicsCommandList10,
+    pub render_target: &'a ID3D12Resource,
+    pub render_target_handle: D3D12_CPU_DESCRIPTOR_HANDLE,
+    pub viewport: D3D12_VIEWPORT,
+    pub scissor: RECT,
+}
+
+pub trait App {
+    fn record_ui(&mut self, ctx: &egui::Context);
+    fn draw(
+        &mut self,
+        lib: &Lib,
+        frame_resources: &FrameResources,
+    ) -> Result<(), Box<dyn std::error::Error>>;
+}
+
+/// The winit application struct
+struct AppRunner<T, F> {
+    /// The function used to create the app once the window can be created
+    app_creator: Option<F>,
+    /// The state of the application, which gets populated when the winit resume method is executed
+    running_state: OnceCell<RunningState<T>>,
+}
+
+impl<T, F> winit::application::ApplicationHandler for AppRunner<T, F>
+where
+    T: App,
+    F: FnOnce(&Lib) -> T,
+{
+    fn resumed(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
+        // Only create the running state once
+        if self.running_state.get().is_some() {
+            return;
+        }
+
+        let window = event_loop
+            .create_window(WindowAttributes::default())
+            .unwrap();
+        let lib = Lib::new().unwrap();
+        let app_creator = self.app_creator.take().unwrap();
+        let app = (app_creator)(&lib);
+
+        let running_state = RunningState::new(window, lib, app).unwrap();
+        self.running_state
+            .set(running_state)
+            .map_err(|_| "Running state was initialized twice")
+            .unwrap();
+    }
+
+    fn window_event(
+        &mut self,
+        event_loop: &winit::event_loop::ActiveEventLoop,
+        _window_id: winit::window::WindowId,
+        event: WindowEvent,
+    ) {
+        match event {
+            WindowEvent::CloseRequested => event_loop.exit(),
+            WindowEvent::RedrawRequested => {
+                if let Some(running_state) = self.running_state.get_mut() {
+                    running_state.draw().unwrap();
+                }
+            }
+            event => {
+                if let Some(running_state) = self.running_state.get_mut() {
+                    running_state.event(&event);
+                }
+            }
+        }
+    }
+}
+
+pub fn run_app<T: App>(
+    app_creator: impl FnOnce(&Lib) -> T,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let event_loop = EventLoop::new()?;
+    event_loop.run_app(&mut AppRunner {
+        app_creator: Some(app_creator),
+        running_state: OnceCell::new(),
+    })?;
+
+    Ok(())
+}
