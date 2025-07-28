@@ -6,10 +6,10 @@ use windows::Win32::Graphics::{
 };
 
 use super::BufferLocation;
-use crate::gimslib::Lib;
+use crate::gimslib::GPULib;
 
 pub struct VectorConstantBuffer<T> {
-    lib: Arc<Lib>,
+    lib: Arc<GPULib>,
     resource: ID3D12Resource,
     max_size: usize,
     current_len: usize,
@@ -19,7 +19,7 @@ pub struct VectorConstantBuffer<T> {
 
 impl<T> VectorConstantBuffer<T> {
     pub fn new(
-        lib: Arc<Lib>,
+        lib: Arc<GPULib>,
         initial_size: usize,
         location: BufferLocation,
     ) -> Result<Self, Box<dyn std::error::Error>> {
@@ -36,7 +36,7 @@ impl<T> VectorConstantBuffer<T> {
     }
 
     fn create_resource(
-        lib: &Lib,
+        lib: &GPULib,
         count: usize,
         location: BufferLocation,
     ) -> Result<ID3D12Resource, Box<dyn std::error::Error>> {

@@ -1,4 +1,4 @@
-use gimslib_rs::{FrameResources, gimslib::Lib};
+use gimslib_rs::{FrameResources, gimslib::GPULib};
 use windows::Win32::Graphics::Direct3D12::*;
 
 struct App {
@@ -6,7 +6,7 @@ struct App {
 }
 
 impl App {
-    fn new(lib: &Lib) -> Self {
+    fn new(lib: &GPULib) -> Self {
         let mut root_blob_option = None;
         unsafe {
             D3D12SerializeRootSignature(
@@ -43,7 +43,7 @@ impl gimslib_rs::App for App {
 
     fn draw(
         &mut self,
-        _lib: &gimslib_rs::gimslib::Lib,
+        _lib: &gimslib_rs::gimslib::GPULib,
         FrameResources {
             command_list,
             render_target: _,

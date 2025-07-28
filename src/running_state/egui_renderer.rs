@@ -19,7 +19,7 @@ use winit::{event::WindowEvent, window::Window};
 use super::BufferLocation;
 use crate::{
     FrameResources,
-    gimslib::Lib,
+    gimslib::GPULib,
     running_state::{constant_buffer::VectorConstantBuffer, texture_manager::TextureManager},
     swapchain::Swapchain,
 };
@@ -42,7 +42,7 @@ struct RootConstants {
 pub struct EguiRenderer {
     context: egui::Context,
     egui_winit_state: egui_winit::State,
-    lib: Arc<Lib>,
+    lib: Arc<GPULib>,
     window: Arc<Window>,
     viewport_info: egui::ViewportInfo,
     texture_manager: TextureManager,
@@ -57,7 +57,7 @@ pub struct EguiRenderer {
 }
 
 impl EguiRenderer {
-    pub fn new(lib: Arc<Lib>, swapchain: &Swapchain) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn new(lib: Arc<GPULib>, swapchain: &Swapchain) -> Result<Self, Box<dyn std::error::Error>> {
         let context = egui::Context::default();
 
         let egui_winit_state = egui_winit::State::new(
@@ -141,7 +141,7 @@ impl EguiRenderer {
 
     pub fn draw(
         &self,
-        _lib: &Lib,
+        _lib: &GPULib,
         FrameResources {
             command_list,
             render_target: _,
@@ -241,7 +241,7 @@ impl EguiRenderer {
         Ok(())
     }
 
-    fn create_root_signature(lib: &Lib) -> Result<ID3D12RootSignature, Box<dyn std::error::Error>> {
+    fn create_root_signature(lib: &GPULib) -> Result<ID3D12RootSignature, Box<dyn std::error::Error>> {
         let mut root_blob_option = None;
 
         let sampler = D3D12_STATIC_SAMPLER_DESC {
@@ -324,7 +324,7 @@ impl EguiRenderer {
     }
 
     fn create_pipeline(
-        lib: &Lib,
+        lib: &GPULib,
         root_signature: ID3D12RootSignature,
     ) -> Result<ID3D12PipelineState, Box<dyn std::error::Error>> {
         let mut vertex_shader = hassle_rs::compile_hlsl(

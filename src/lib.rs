@@ -21,7 +21,7 @@ use winit::{
 };
 
 use frame_data::FrameData;
-use gimslib::Lib;
+use gimslib::GPULib;
 use running_state::RunningState;
 
 pub struct FrameResources<'a> {
@@ -37,7 +37,7 @@ pub trait App {
     fn record_ui(&mut self, ctx: &egui::Context);
     fn draw(
         &mut self,
-        lib: &Lib,
+        lib: &GPULib,
         frame_resources: &FrameResources,
     ) -> Result<(), Box<dyn std::error::Error>>;
 }
@@ -53,14 +53,14 @@ struct AppRunner<T, F> {
 impl<T, F> AppRunner<T, F>
 where
     T: App,
-    F: FnOnce(&Lib) -> T,
+    F: FnOnce(&GPULib) -> T,
 {
     fn try_initialize_app(
         &mut self,
         event_loop: &ActiveEventLoop,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let window = event_loop.create_window(WindowAttributes::default())?;
-        let lib = Lib::new()?;
+        let lib = GPULib::new()?;
         let app_creator = self
             .app_creator
             .take()
@@ -79,7 +79,7 @@ where
 impl<T, F> winit::application::ApplicationHandler for AppRunner<T, F>
 where
     T: App,
-    F: FnOnce(&Lib) -> T,
+    F: FnOnce(&GPULib) -> T,
 {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         // Only create the running state once
@@ -125,7 +125,7 @@ where
 }
 
 pub fn run_app<T: App>(
-    app_creator: impl FnOnce(&Lib) -> T,
+    app_creator: impl FnOnce(&GPULib) -> T,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let event_loop = EventLoop::new()?;
     event_loop.run_app(&mut AppRunner {

@@ -7,18 +7,18 @@ use windows::Win32::Graphics::Dxgi::Common::{DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FO
 use windows::core::Interface;
 
 use super::BufferLocation;
-use crate::gimslib::Lib;
+use crate::gimslib::GPULib;
 
 pub struct TextureManager {
     textures: HashMap<u64, (ID3D12Resource, ID3D12DescriptorHeap)>,
     command_allocator: ID3D12CommandAllocator,
     command_list: ID3D12GraphicsCommandList,
     fence: ID3D12Fence,
-    lib: Arc<Lib>,
+    lib: Arc<GPULib>,
 }
 
 impl TextureManager {
-    pub fn new(lib: Arc<Lib>) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn new(lib: Arc<GPULib>) -> Result<Self, Box<dyn std::error::Error>> {
         let textures = HashMap::new();
 
         let command_allocator = unsafe {
@@ -169,7 +169,7 @@ impl TextureManager {
     }
 
     fn create_texture(
-        lib: &Lib,
+        lib: &GPULib,
         width: u32,
         height: u32,
         location: BufferLocation,
@@ -214,7 +214,7 @@ impl TextureManager {
     }
 
     fn create_upload_buffer(
-        lib: &Lib,
+        lib: &GPULib,
         bytes: u64,
     ) -> Result<ID3D12Resource, Box<dyn std::error::Error>> {
         let heap_properties = D3D12_HEAP_PROPERTIES {
@@ -304,7 +304,7 @@ impl TextureManager {
     }
 
     fn create_heap_for_texture(
-        lib: &Lib,
+        lib: &GPULib,
         texture: &ID3D12Resource,
     ) -> Result<ID3D12DescriptorHeap, Box<dyn std::error::Error>> {
         let heap: ID3D12DescriptorHeap = unsafe {

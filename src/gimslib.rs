@@ -1,12 +1,12 @@
 use windows::Win32::Graphics::{Direct3D::*, Direct3D12::*, Dxgi::*};
 
-pub struct Lib {
+pub struct GPULib {
     pub factory: IDXGIFactory7,
     pub device: ID3D12Device9,
     pub queue: ID3D12CommandQueue,
 }
 
-impl Lib {
+impl GPULib {
     pub fn new() -> Result<Self, Box<dyn std::error::Error>> {
         #[cfg(debug_assertions)]
         {
@@ -70,7 +70,7 @@ impl Lib {
             device.CreateCommandQueue(&desc)
         }?;
 
-        Ok(Lib {
+        Ok(GPULib {
             factory,
             device,
             queue,

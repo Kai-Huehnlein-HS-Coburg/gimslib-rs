@@ -10,7 +10,7 @@ use winit::{
     window::Window,
 };
 
-use crate::Lib;
+use crate::GPULib;
 
 pub struct Swapchain {
     pub render_target_heap: ID3D12DescriptorHeap,
@@ -20,12 +20,12 @@ pub struct Swapchain {
     pub window: Arc<Window>,
     pub viewport: D3D12_VIEWPORT,
     pub scissor: RECT,
-    lib: Arc<Lib>,
+    lib: Arc<GPULib>,
 }
 
 impl Swapchain {
     pub fn new(
-        lib: Arc<Lib>,
+        lib: Arc<GPULib>,
         window: Arc<Window>,
         width: u32,
         height: u32,

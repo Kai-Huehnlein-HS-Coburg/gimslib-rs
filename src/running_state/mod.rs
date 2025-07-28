@@ -12,7 +12,7 @@ use winit::event::WindowEvent;
 use winit::window::Window;
 
 use crate::FrameData;
-use crate::Lib;
+use crate::GPULib;
 use crate::event::Event;
 use crate::running_state::egui_renderer::EguiRenderer;
 use crate::swapchain::Swapchain;
@@ -33,7 +33,7 @@ pub struct RunningFrameData {
 }
 
 pub struct RunningState<T> {
-    lib: Arc<Lib>,
+    lib: Arc<GPULib>,
     app: T,
     swapchain: Swapchain,
     frame_data: FrameData<RunningFrameData>,
@@ -41,7 +41,7 @@ pub struct RunningState<T> {
 }
 
 impl<T: App> RunningState<T> {
-    pub fn new(window: Window, lib: Lib, app: T) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn new(window: Window, lib: GPULib, app: T) -> Result<Self, Box<dyn std::error::Error>> {
         let window = Arc::new(window);
         let window_size = window.inner_size();
         let lib = Arc::new(lib);
