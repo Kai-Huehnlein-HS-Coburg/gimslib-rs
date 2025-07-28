@@ -1,9 +1,4 @@
-use std::ffi::c_void;
-use std::mem::MaybeUninit;
-use std::ptr::null_mut;
-
 use windows::Win32::Graphics::{Direct3D::*, Direct3D12::*, Dxgi::*};
-use windows::core::{Interface, PCSTR};
 
 pub struct Lib {
     pub factory: IDXGIFactory7,
@@ -41,8 +36,9 @@ impl Lib {
         // Callback will never be unregistered, so all the related variables can be dropped
         #[cfg(debug_assertions)]
         unsafe {
+            use windows::core::Interface;
             // Get InfoQueue1 interface from device
-            let mut info_queue = MaybeUninit::<ID3D12InfoQueue1>::uninit();
+            let mut info_queue = std::mem::MaybeUninit::<ID3D12InfoQueue1>::uninit();
             if device
                 .query(&ID3D12InfoQueue1::IID, info_queue.as_mut_ptr() as _)
                 .is_err()
@@ -50,11 +46,11 @@ impl Lib {
                 return Err("Failed to query info queue".into());
             }
 
-            let mut callback_cookie = MaybeUninit::uninit();
+            let mut callback_cookie = std::mem::MaybeUninit::uninit();
             info_queue.assume_init().RegisterMessageCallback(
                 Some(debug_message_callback),
                 D3D12_MESSAGE_CALLBACK_FLAG_NONE,
-                null_mut(),
+                std::ptr::null_mut(),
                 callback_cookie.as_mut_ptr(),
             )?;
 
@@ -108,12 +104,13 @@ impl Lib {
     }
 }
 
+#[cfg(debug_assertions)]
 unsafe extern "system" fn debug_message_callback(
     _category_code: D3D12_MESSAGE_CATEGORY,
     severity_code: D3D12_MESSAGE_SEVERITY,
     _id: D3D12_MESSAGE_ID,
-    description: PCSTR,
-    _context: *mut c_void,
+    description: windows::core::PCSTR,
+    _context: *mut std::ffi::c_void,
 ) {
     if severity_code.0 > D3D12_MESSAGE_SEVERITY_WARNING.0 {
         // Any message less severe than a warning should be ignored

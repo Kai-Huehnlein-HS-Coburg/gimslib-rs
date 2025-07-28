@@ -14,7 +14,11 @@ use windows::{
     },
     core::{HSTRING, h},
 };
-use winit::{event::WindowEvent, event_loop::EventLoop, window::WindowAttributes};
+use winit::{
+    event::WindowEvent,
+    event_loop::{ActiveEventLoop, EventLoop},
+    window::WindowAttributes,
+};
 
 use frame_data::FrameData;
 use gimslib::Lib;
@@ -46,46 +50,56 @@ struct AppRunner<T, F> {
     running_state: OnceCell<RunningState<T>>,
 }
 
+impl<T, F> AppRunner<T, F>
+where
+    T: App,
+    F: FnOnce(&Lib) -> T,
+{
+    fn try_initialize_app(
+        &mut self,
+        event_loop: &ActiveEventLoop,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let window = event_loop.create_window(WindowAttributes::default())?;
+        let lib = Lib::new()?;
+        let app_creator = self
+            .app_creator
+            .take()
+            .ok_or("Application cannot be initialized twice")?;
+        let app = (app_creator)(&lib);
+        let running_state = RunningState::new(window, lib, app)?;
+
+        self.running_state
+            .set(running_state)
+            .map_err(|_| "Application cannot be initialized twice")?;
+
+        Ok(())
+    }
+}
+
 impl<T, F> winit::application::ApplicationHandler for AppRunner<T, F>
 where
     T: App,
     F: FnOnce(&Lib) -> T,
 {
-    fn resumed(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
+    fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         // Only create the running state once
         if self.running_state.get().is_some() {
             return;
         }
 
-        let window = event_loop
-            .create_window(WindowAttributes::default())
-            .unwrap();
-        let lib = Lib::new().unwrap();
-        let app_creator = self.app_creator.take().unwrap();
-        let app = (app_creator)(&lib);
-
-        let running_state = match RunningState::new(window, lib, app) {
-            Ok(running_state) => running_state,
-            Err(error) => {
-                let error_message = format!("{}", error);
-                println!("Error while initializing application:\n{}", error_message);
-                unsafe {
-                    MessageBoxW(
-                        None,
-                        &HSTRING::from(error_message),
-                        h!("Error while initializing application"),
-                        MB_ICONERROR,
-                    )
-                };
-                event_loop.exit();
-                return;
-            }
-        };
-
-        self.running_state
-            .set(running_state)
-            .map_err(|_| "Running state was initialized twice")
-            .unwrap();
+        if let Err(error) = self.try_initialize_app(event_loop) {
+            let error_message = format!("{}", error);
+            println!("Error while initializing application:\n{}", error_message);
+            unsafe {
+                MessageBoxW(
+                    None,
+                    &HSTRING::from(error_message),
+                    h!("Error while initializing application"),
+                    MB_ICONERROR,
+                )
+            };
+            event_loop.exit();
+        }
     }
 
     fn window_event(
