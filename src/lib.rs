@@ -6,7 +6,14 @@ pub mod swapchain;
 
 use std::cell::OnceCell;
 
-use windows::Win32::{Foundation::RECT, Graphics::Direct3D12::*};
+use windows::{
+    Win32::{
+        Foundation::RECT,
+        Graphics::Direct3D12::*,
+        UI::WindowsAndMessaging::{MB_ICONERROR, MessageBoxW},
+    },
+    core::{HSTRING, h},
+};
 use winit::{event::WindowEvent, event_loop::EventLoop, window::WindowAttributes};
 
 use frame_data::FrameData;
@@ -57,7 +64,24 @@ where
         let app_creator = self.app_creator.take().unwrap();
         let app = (app_creator)(&lib);
 
-        let running_state = RunningState::new(window, lib, app).unwrap();
+        let running_state = match RunningState::new(window, lib, app) {
+            Ok(running_state) => running_state,
+            Err(error) => {
+                let error_message = format!("{}", error);
+                println!("Error while initializing application:\n{}", error_message);
+                unsafe {
+                    MessageBoxW(
+                        None,
+                        &HSTRING::from(error_message),
+                        h!("Error while initializing application"),
+                        MB_ICONERROR,
+                    )
+                };
+                event_loop.exit();
+                return;
+            }
+        };
+
         self.running_state
             .set(running_state)
             .map_err(|_| "Running state was initialized twice")
