@@ -118,8 +118,9 @@ impl<T: App> RunningState<T> {
 
         self.egui_renderer.record(|ctx| self.app.record_ui(ctx))?;
         *free_list = self.egui_renderer.apply_texture_delta(free_list)?;
-        
-        let (render_target_handle, render_target_handle_srgb) = self.swapchain.current_render_target_handle();
+
+        let (render_target_handle, render_target_handle_srgb) =
+            self.swapchain.current_render_target_handle();
 
         let frame_resources = FrameResources {
             command_list,
