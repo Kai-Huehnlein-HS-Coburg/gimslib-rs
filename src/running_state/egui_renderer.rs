@@ -145,8 +145,8 @@ impl EguiRenderer {
         FrameResources {
             command_list,
             render_target: _,
-            render_target_handle: _,
-            render_target_handle_srgb,
+            render_target_handle,
+            render_target_handle_srgb: _,
             viewport,
             scissor,
         }: &FrameResources,
@@ -158,7 +158,7 @@ impl EguiRenderer {
         let pointer: *const RootConstants = &root_constants;
 
         unsafe {
-            command_list.OMSetRenderTargets(1, Some(render_target_handle_srgb), false, None);
+            command_list.OMSetRenderTargets(1, Some(render_target_handle), false, None);
             command_list.RSSetViewports(&[*viewport]);
             command_list.RSSetScissorRects(&[*scissor]);
             command_list.SetGraphicsRootSignature(&self.root_signature);
@@ -246,9 +246,9 @@ impl EguiRenderer {
 
         let sampler = D3D12_STATIC_SAMPLER_DESC {
             Filter: D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT,
-            AddressU: D3D12_TEXTURE_ADDRESS_MODE_WRAP,
-            AddressV: D3D12_TEXTURE_ADDRESS_MODE_WRAP,
-            AddressW: D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+            AddressU: D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+            AddressV: D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+            AddressW: D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
             MipLODBias: 0.0,
             MaxAnisotropy: 0,
             ComparisonFunc: D3D12_COMPARISON_FUNC_NEVER,
@@ -445,7 +445,7 @@ impl EguiRenderer {
                 Quality: 0,
             },
             RTVFormats: [
-                DXGI_FORMAT_R8G8B8A8_UNORM_SRGB,
+                DXGI_FORMAT_R8G8B8A8_UNORM,
                 DXGI_FORMAT_UNKNOWN,
                 DXGI_FORMAT_UNKNOWN,
                 DXGI_FORMAT_UNKNOWN,
