@@ -8,7 +8,7 @@ use windows::{
         Direct3D::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
         Direct3D12::*,
         Dxgi::Common::{
-            DXGI_FORMAT, DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_R32_UINT,
+            DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_R8G8B8A8_UNORM_SRGB, DXGI_FORMAT_R32_UINT,
             DXGI_FORMAT_R32G32_FLOAT, DXGI_FORMAT_UNKNOWN, DXGI_SAMPLE_DESC,
         },
     },
@@ -57,11 +57,7 @@ pub struct EguiRenderer {
 }
 
 impl EguiRenderer {
-    pub fn new(
-        lib: Arc<Lib>,
-        swapchain: &Swapchain,
-        format: DXGI_FORMAT,
-    ) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn new(lib: Arc<Lib>, swapchain: &Swapchain) -> Result<Self, Box<dyn std::error::Error>> {
         let context = egui::Context::default();
 
         let egui_winit_state = egui_winit::State::new(
@@ -77,7 +73,7 @@ impl EguiRenderer {
         egui_winit::update_viewport_info(&mut viewport_info, &context, &swapchain.window, true);
 
         let root_signature = Self::create_root_signature(&lib)?;
-        let pipeline = Self::create_pipeline(&lib, root_signature.clone(), format)?;
+        let pipeline = Self::create_pipeline(&lib, root_signature.clone())?;
 
         let texture_manager = TextureManager::new(lib.clone())?;
 
@@ -149,7 +145,8 @@ impl EguiRenderer {
         FrameResources {
             command_list,
             render_target: _,
-            render_target_handle,
+            render_target_handle: _,
+            render_target_handle_srgb,
             viewport,
             scissor,
         }: &FrameResources,
@@ -161,7 +158,7 @@ impl EguiRenderer {
         let pointer: *const RootConstants = &root_constants;
 
         unsafe {
-            command_list.OMSetRenderTargets(1, Some(render_target_handle), false, None);
+            command_list.OMSetRenderTargets(1, Some(render_target_handle_srgb), false, None);
             command_list.RSSetViewports(&[*viewport]);
             command_list.RSSetScissorRects(&[*scissor]);
             command_list.SetGraphicsRootSignature(&self.root_signature);
@@ -329,7 +326,6 @@ impl EguiRenderer {
     fn create_pipeline(
         lib: &Lib,
         root_signature: ID3D12RootSignature,
-        format: DXGI_FORMAT,
     ) -> Result<ID3D12PipelineState, Box<dyn std::error::Error>> {
         let mut vertex_shader = hassle_rs::compile_hlsl(
             "egui.hlsl",
@@ -449,7 +445,7 @@ impl EguiRenderer {
                 Quality: 0,
             },
             RTVFormats: [
-                format,
+                DXGI_FORMAT_R8G8B8A8_UNORM_SRGB,
                 DXGI_FORMAT_UNKNOWN,
                 DXGI_FORMAT_UNKNOWN,
                 DXGI_FORMAT_UNKNOWN,

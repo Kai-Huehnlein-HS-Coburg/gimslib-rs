@@ -14,6 +14,7 @@ use crate::Lib;
 
 pub struct Swapchain {
     pub render_target_heap: ID3D12DescriptorHeap,
+    pub render_target_heap_srgb: ID3D12DescriptorHeap,
     pub render_targets: Vec<ID3D12Resource>,
     pub swapchain: IDXGISwapChain4,
     pub window: Arc<Window>,
@@ -70,6 +71,15 @@ impl Swapchain {
                 })
         }?;
 
+        let render_target_heap_srgb: ID3D12DescriptorHeap = unsafe {
+            lib.device
+                .CreateDescriptorHeap(&D3D12_DESCRIPTOR_HEAP_DESC {
+                    NumDescriptors: frame_count,
+                    Type: D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
+                    ..Default::default()
+                })
+        }?;
+
         let rtv_descriptor_size = unsafe {
             lib.device
                 .GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV)
@@ -87,8 +97,27 @@ impl Swapchain {
                             ptr: render_target_heap.GetCPUDescriptorHandleForHeapStart().ptr
                                 + frame * rtv_descriptor_size as usize,
                         },
-                    )
-                };
+                    );
+                    lib.device.CreateRenderTargetView(
+                        &render_target,
+                        Some(&D3D12_RENDER_TARGET_VIEW_DESC {
+                            Format: DXGI_FORMAT_R8G8B8A8_UNORM_SRGB,
+                            ViewDimension: D3D12_RTV_DIMENSION_TEXTURE2D,
+                            Anonymous: D3D12_RENDER_TARGET_VIEW_DESC_0 {
+                                Texture2D: D3D12_TEX2D_RTV {
+                                    MipSlice: 0,
+                                    PlaneSlice: 0,
+                                },
+                            },
+                        }),
+                        D3D12_CPU_DESCRIPTOR_HANDLE {
+                            ptr: render_target_heap_srgb
+                                .GetCPUDescriptorHandleForHeapStart()
+                                .ptr
+                                + frame * rtv_descriptor_size as usize,
+                        },
+                    );
+                }
 
                 Ok(render_target)
             })
@@ -115,6 +144,7 @@ impl Swapchain {
             swapchain,
             window,
             render_target_heap,
+            render_target_heap_srgb,
             viewport,
             scissor,
             render_targets,
@@ -126,20 +156,34 @@ impl Swapchain {
         &self.render_targets[index]
     }
 
-    pub fn current_render_target_handle(&self) -> D3D12_CPU_DESCRIPTOR_HANDLE {
+    /// Returns the UNORM and UNORM_SRGB handles to the current render target
+    pub fn current_render_target_handle(
+        &self,
+    ) -> (D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_CPU_DESCRIPTOR_HANDLE) {
         let increment = unsafe {
             self.lib
                 .device
                 .GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV)
         } as usize;
-        D3D12_CPU_DESCRIPTOR_HANDLE {
-            ptr: unsafe {
-                self.render_target_heap
-                    .GetCPUDescriptorHandleForHeapStart()
-                    .ptr
-                    + increment * self.swapchain.GetCurrentBackBufferIndex() as usize
+
+        (
+            D3D12_CPU_DESCRIPTOR_HANDLE {
+                ptr: unsafe {
+                    self.render_target_heap
+                        .GetCPUDescriptorHandleForHeapStart()
+                        .ptr
+                        + increment * self.swapchain.GetCurrentBackBufferIndex() as usize
+                },
             },
-        }
+            D3D12_CPU_DESCRIPTOR_HANDLE {
+                ptr: unsafe {
+                    self.render_target_heap_srgb
+                        .GetCPUDescriptorHandleForHeapStart()
+                        .ptr
+                        + increment * self.swapchain.GetCurrentBackBufferIndex() as usize
+                },
+            },
+        )
     }
 }
 

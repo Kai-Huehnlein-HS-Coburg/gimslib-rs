@@ -48,6 +48,7 @@ impl gimslib_rs::App for App {
             command_list,
             render_target: _,
             render_target_handle,
+            render_target_handle_srgb: _,
             viewport: _,
             scissor: _,
         }: &FrameResources,

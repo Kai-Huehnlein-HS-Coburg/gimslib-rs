@@ -17,6 +17,7 @@ pub struct FrameResources<'a> {
     pub command_list: &'a ID3D12GraphicsCommandList10,
     pub render_target: &'a ID3D12Resource,
     pub render_target_handle: D3D12_CPU_DESCRIPTOR_HANDLE,
+    pub render_target_handle_srgb: D3D12_CPU_DESCRIPTOR_HANDLE,
     pub viewport: D3D12_VIEWPORT,
     pub scissor: RECT,
 }
