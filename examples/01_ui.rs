@@ -1,65 +1,41 @@
-use gimslib_rs::{FrameResources, gimslib::GPULib};
-use windows::Win32::Graphics::Direct3D12::*;
+use gimslib_rs::FrameResources;
 
 struct App {
-    _root_signature: ID3D12RootSignature,
+    clear_color: [f32; 4],
 }
 
-impl App {
-    fn new(lib: &GPULib) -> Self {
-        let mut root_blob_option = None;
-        unsafe {
-            D3D12SerializeRootSignature(
-                &D3D12_ROOT_SIGNATURE_DESC {
-                    ..Default::default()
-                },
-                D3D_ROOT_SIGNATURE_VERSION_1,
-                &mut root_blob_option,
-                None,
-            )
-        }
-        .unwrap();
-
-        let root_blob = root_blob_option.expect("Failed to create root signature");
-        let blob_data = unsafe {
-            std::slice::from_raw_parts(
-                root_blob.GetBufferPointer() as *const u8,
-                root_blob.GetBufferSize(),
-            )
-        };
-
-        let root_signature = unsafe { lib.device.CreateRootSignature(0, blob_data) }.unwrap();
-
+impl Default for App {
+    fn default() -> Self {
         App {
-            _root_signature: root_signature,
+            clear_color: [0.0, 0.0, 0.0, 1.0],
         }
     }
 }
 
 impl gimslib_rs::App for App {
     fn record_ui(&mut self, ctx: &egui::Context) {
-        egui::Window::new("Window").show(ctx, |ui| ui.label("text"));
+        egui::Window::new("Window").show(ctx, |ui| {
+            ui.label("Clear color:");
+            ui.color_edit_button_rgba_unmultiplied(&mut self.clear_color)
+        });
     }
 
     fn draw(
         &mut self,
         _lib: &gimslib_rs::gimslib::GPULib,
-        FrameResources {
-            command_list,
-            render_target: _,
-            render_target_handle,
-            render_target_handle_srgb: _,
-            viewport: _,
-            scissor: _,
-        }: &FrameResources,
+        res: &FrameResources,
     ) -> Result<(), Box<dyn std::error::Error>> {
         unsafe {
-            command_list.ClearRenderTargetView(*render_target_handle, &[0.0, 0.0, 0.0, 1.0], None)
+            res.command_list.ClearRenderTargetView(
+                res.render_target_handle_srgb,
+                &self.clear_color,
+                None,
+            )
         };
         Ok(())
     }
 }
 
 fn main() {
-    gimslib_rs::run_app(App::new).unwrap();
+    gimslib_rs::run_app(|_| App::default()).unwrap();
 }

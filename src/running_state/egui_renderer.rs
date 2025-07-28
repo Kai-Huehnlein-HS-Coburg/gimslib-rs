@@ -57,7 +57,10 @@ pub struct EguiRenderer {
 }
 
 impl EguiRenderer {
-    pub fn new(lib: Arc<GPULib>, swapchain: &Swapchain) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn new(
+        lib: Arc<GPULib>,
+        swapchain: &Swapchain,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
         let context = egui::Context::default();
 
         let egui_winit_state = egui_winit::State::new(
@@ -241,7 +244,9 @@ impl EguiRenderer {
         Ok(())
     }
 
-    fn create_root_signature(lib: &GPULib) -> Result<ID3D12RootSignature, Box<dyn std::error::Error>> {
+    fn create_root_signature(
+        lib: &GPULib,
+    ) -> Result<ID3D12RootSignature, Box<dyn std::error::Error>> {
         let mut root_blob_option = None;
 
         let sampler = D3D12_STATIC_SAMPLER_DESC {

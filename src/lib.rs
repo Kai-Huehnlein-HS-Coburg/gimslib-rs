@@ -124,6 +124,8 @@ where
     }
 }
 
+/// The app_creator function creates the user-defined application struct using a GPULib object,
+/// which contains the basic Direct3D 12 structs.
 pub fn run_app<T: App>(
     app_creator: impl FnOnce(&GPULib) -> T,
 ) -> Result<(), Box<dyn std::error::Error>> {
