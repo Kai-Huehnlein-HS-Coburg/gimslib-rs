@@ -5,8 +5,13 @@ use windows::Win32::Graphics::{
     Dxgi::Common::{DXGI_FORMAT, DXGI_FORMAT_UNKNOWN},
 };
 
-use super::BufferLocation;
 use crate::gpulib::GPULib;
+
+#[derive(Debug, Clone, Copy)]
+pub enum BufferLocation {
+    CPU,
+    GPU,
+}
 
 pub struct VectorConstantBuffer<T> {
     lib: Arc<GPULib>,

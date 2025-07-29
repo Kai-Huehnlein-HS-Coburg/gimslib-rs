@@ -6,7 +6,6 @@ use windows::Win32::Graphics::Direct3D12::*;
 use windows::Win32::Graphics::Dxgi::Common::{DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_UNKNOWN};
 use windows::core::Interface;
 
-use super::BufferLocation;
 use crate::gpulib::GPULib;
 
 pub struct TextureManager {
@@ -67,7 +66,7 @@ impl TextureManager {
                 Self::create_upload_buffer(&self.lib, aligned_row_bytes as u64 * height as u64)?;
 
             Self::fill_buffer_aligned(&upload_buffer, &delta.image, aligned_row_bytes)?;
-            
+
             let mut new_resource = false;
             let (destination_textue, _) = self
                 .textures
@@ -78,7 +77,6 @@ impl TextureManager {
                         &self.lib,
                         width,
                         delta.image.height() as u32,
-                        BufferLocation::GPU,
                     )
                     .unwrap();
                     let heap = Self::create_heap_for_texture(&self.lib, &texture).unwrap();
@@ -128,7 +126,7 @@ impl TextureManager {
 
                 self.command_allocator.Reset()?;
                 self.command_list.Reset(&self.command_allocator, None)?;
-                
+
                 self.command_list.ResourceBarrier(&[D3D12_RESOURCE_BARRIER {
                     Type: D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
                     Flags: D3D12_RESOURCE_BARRIER_FLAG_NONE,
@@ -190,13 +188,9 @@ impl TextureManager {
         lib: &GPULib,
         width: u32,
         height: u32,
-        location: BufferLocation,
     ) -> Result<ID3D12Resource, Box<dyn std::error::Error>> {
         let heap_properties = D3D12_HEAP_PROPERTIES {
-            Type: match location {
-                BufferLocation::CPU => D3D12_HEAP_TYPE_UPLOAD,
-                BufferLocation::GPU => D3D12_HEAP_TYPE_GPU_UPLOAD,
-            },
+            Type: D3D12_HEAP_TYPE_GPU_UPLOAD,
             ..Default::default()
         };
 

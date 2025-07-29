@@ -16,12 +16,12 @@ use windows::{
 };
 use winit::{event::WindowEvent, window::Window};
 
-use super::BufferLocation;
 use crate::{
     FrameResources,
     gpulib::GPULib,
-    running_state::{constant_buffer::VectorConstantBuffer, texture_manager::TextureManager},
+    running_state::texture_manager::TextureManager,
     swapchain::Swapchain,
+    vector_constant_buffer::{BufferLocation, VectorConstantBuffer},
 };
 
 struct EguiMesh {

@@ -1,4 +1,3 @@
-mod constant_buffer;
 mod egui_renderer;
 mod texture_manager;
 
@@ -17,12 +16,6 @@ use crate::event::Event;
 use crate::running_state::egui_renderer::EguiRenderer;
 use crate::swapchain::Swapchain;
 use crate::{App, FrameResources};
-
-#[derive(Debug, Clone, Copy)]
-pub enum BufferLocation {
-    CPU,
-    GPU,
-}
 
 pub struct RunningFrameData {
     command_allocator: ID3D12CommandAllocator,

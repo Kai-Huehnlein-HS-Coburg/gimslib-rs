@@ -1,8 +1,9 @@
+pub mod vector_constant_buffer;
 mod event;
 pub mod frame_data;
 pub mod gpulib;
-pub mod running_state;
-pub mod swapchain;
+mod running_state;
+mod swapchain;
 
 use std::cell::OnceCell;
 

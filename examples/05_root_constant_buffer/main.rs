@@ -217,10 +217,7 @@ fn create_constant_buffer(
 }
 
 impl App {
-    fn update_constant_buffer<T>(
-        &self,
-        contents: T,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    fn update_constant_buffer<T>(&self, contents: T) -> Result<(), Box<dyn std::error::Error>> {
         unsafe {
             let mut pointer = std::ptr::null_mut();
             let constant_buffer = self.frame_data.get_current();
