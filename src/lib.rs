@@ -59,7 +59,9 @@ where
         event_loop: &ActiveEventLoop,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let window = event_loop.create_window(
-            WindowAttributes::default().with_title(self.app_config.window_title.as_str()),
+            WindowAttributes::default()
+                .with_title(self.app_config.window_title.as_str())
+                .with_inner_size(self.app_config.window_size),
         )?;
         let lib = Arc::new(GPULib::new()?);
         let app_creator = self
@@ -125,14 +127,36 @@ where
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum WindowSize {
+    /// Width and height in display pixels
+    Physical(u32, u32),
+    /// Width and height in logical pixels, respecting scaling factors
+    Logical(u32, u32),
+}
+
+impl Into<winit::dpi::Size> for WindowSize {
+    fn into(self) -> winit::dpi::Size {
+        match self {
+            WindowSize::Physical(width, height) => {
+                winit::dpi::PhysicalSize { width, height }.into()
+            }
+            WindowSize::Logical(width, height) => winit::dpi::LogicalSize { width, height }.into(),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct AppConfig {
-    window_title: String,
+    pub window_title: String,
+    pub window_size: WindowSize,
 }
 
 impl Default for AppConfig {
     fn default() -> Self {
         AppConfig {
             window_title: "gimslib-rs window".to_string(),
+            window_size: WindowSize::Logical(1024, 768),
         }
     }
 }
