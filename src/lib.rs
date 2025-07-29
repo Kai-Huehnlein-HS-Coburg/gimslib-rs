@@ -135,9 +135,9 @@ pub enum WindowSize {
     Logical(u32, u32),
 }
 
-impl Into<winit::dpi::Size> for WindowSize {
-    fn into(self) -> winit::dpi::Size {
-        match self {
+impl From<WindowSize> for winit::dpi::Size {
+    fn from(val: WindowSize) -> Self {
+        match val {
             WindowSize::Physical(width, height) => {
                 winit::dpi::PhysicalSize { width, height }.into()
             }
