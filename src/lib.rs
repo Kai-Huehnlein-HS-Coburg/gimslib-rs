@@ -69,7 +69,7 @@ where
             .take()
             .ok_or("Application cannot be initialized twice")?;
         let app = (app_creator)(lib.clone());
-        let running_state = RunningState::new(window, lib, app)?;
+        let running_state = RunningState::new(window, lib, app, self.app_config.frame_count)?;
 
         self.running_state
             .set(running_state)
@@ -148,8 +148,12 @@ impl From<WindowSize> for winit::dpi::Size {
 
 #[derive(Debug, Clone)]
 pub struct AppConfig {
+    /// Window title
     pub window_title: String,
+    /// Width and height of the drawing area
     pub window_size: WindowSize,
+    /// Number of swapchain frames in flight
+    pub frame_count: usize,
 }
 
 impl Default for AppConfig {
@@ -157,6 +161,7 @@ impl Default for AppConfig {
         AppConfig {
             window_title: "gimslib-rs window".to_string(),
             window_size: WindowSize::Logical(1024, 768),
+            frame_count: 2,
         }
     }
 }

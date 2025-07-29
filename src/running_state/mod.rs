@@ -37,6 +37,7 @@ impl<T: App> RunningState<T> {
         window: Window,
         lib: Arc<GPULib>,
         app: T,
+        frame_count: usize,
     ) -> Result<Self, Box<dyn std::error::Error>> {
         let window = Arc::new(window);
         let window_size = window.inner_size();
@@ -48,7 +49,7 @@ impl<T: App> RunningState<T> {
             3,
         )?;
 
-        let frame_data = FrameData::try_from_fn(2, |_| {
+        let frame_data = FrameData::try_from_fn(frame_count, |_| {
             let command_allocator = unsafe {
                 lib.device
                     .CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT)
