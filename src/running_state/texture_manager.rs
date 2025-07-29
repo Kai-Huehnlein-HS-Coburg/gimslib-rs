@@ -67,11 +67,13 @@ impl TextureManager {
                 Self::create_upload_buffer(&self.lib, aligned_row_bytes as u64 * height as u64)?;
 
             Self::fill_buffer_aligned(&upload_buffer, &delta.image, aligned_row_bytes)?;
-
+            
+            let mut new_resource = false;
             let (destination_textue, _) = self
                 .textures
                 .entry(*id)
                 .or_insert_with(|| {
+                    new_resource = true;
                     let texture = Self::create_texture(
                         &self.lib,
                         width,
@@ -126,6 +128,22 @@ impl TextureManager {
 
                 self.command_allocator.Reset()?;
                 self.command_list.Reset(&self.command_allocator, None)?;
+                
+                self.command_list.ResourceBarrier(&[D3D12_RESOURCE_BARRIER {
+                    Type: D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+                    Flags: D3D12_RESOURCE_BARRIER_FLAG_NONE,
+                    Anonymous: D3D12_RESOURCE_BARRIER_0 {
+                        Transition: ManuallyDrop::new(D3D12_RESOURCE_TRANSITION_BARRIER {
+                            pResource: ManuallyDrop::new(Some(destination_textue.clone())),
+                            Subresource: 0,
+                            StateBefore: match new_resource {
+                                true => D3D12_RESOURCE_STATE_COMMON,
+                                false => D3D12_RESOURCE_STATE_GENERIC_READ,
+                            },
+                            StateAfter: D3D12_RESOURCE_STATE_COPY_DEST,
+                        }),
+                    },
+                }]);
                 self.command_list.CopyTextureRegion(
                     &destination,
                     dst_x as u32,
@@ -139,7 +157,7 @@ impl TextureManager {
                     Flags: D3D12_RESOURCE_BARRIER_FLAG_NONE,
                     Anonymous: D3D12_RESOURCE_BARRIER_0 {
                         Transition: ManuallyDrop::new(D3D12_RESOURCE_TRANSITION_BARRIER {
-                            pResource: ManuallyDrop::new(Some(destination_textue)),
+                            pResource: ManuallyDrop::new(Some(destination_textue.clone())),
                             Subresource: 0,
                             StateBefore: D3D12_RESOURCE_STATE_COPY_DEST,
                             StateAfter: D3D12_RESOURCE_STATE_GENERIC_READ,
