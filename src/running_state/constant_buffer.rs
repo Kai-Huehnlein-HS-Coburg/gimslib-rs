@@ -6,7 +6,7 @@ use windows::Win32::Graphics::{
 };
 
 use super::BufferLocation;
-use crate::gimslib::GPULib;
+use crate::gpulib::GPULib;
 
 pub struct VectorConstantBuffer<T> {
     lib: Arc<GPULib>,

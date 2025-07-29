@@ -19,7 +19,7 @@ use winit::{event::WindowEvent, window::Window};
 use super::BufferLocation;
 use crate::{
     FrameResources,
-    gimslib::GPULib,
+    gpulib::GPULib,
     running_state::{constant_buffer::VectorConstantBuffer, texture_manager::TextureManager},
     swapchain::Swapchain,
 };

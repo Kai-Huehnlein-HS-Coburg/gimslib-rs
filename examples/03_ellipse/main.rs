@@ -1,6 +1,6 @@
 use std::mem::ManuallyDrop;
 
-use gimslib_rs::{FrameResources, gimslib::GPULib};
+use gimslib_rs::{FrameResources, gpulib::GPULib};
 use windows::Win32::Graphics::{
     Direct3D::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST, Direct3D12::*, Dxgi::Common::*,
 };
@@ -157,7 +157,7 @@ impl gimslib_rs::App for App {
 
     fn draw(
         &mut self,
-        _lib: &gimslib_rs::gimslib::GPULib,
+        _lib: &gimslib_rs::gpulib::GPULib,
         res: &FrameResources,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let command_list = res.command_list;

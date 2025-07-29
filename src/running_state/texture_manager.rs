@@ -7,7 +7,7 @@ use windows::Win32::Graphics::Dxgi::Common::{DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FO
 use windows::core::Interface;
 
 use super::BufferLocation;
-use crate::gimslib::GPULib;
+use crate::gpulib::GPULib;
 
 pub struct TextureManager {
     textures: HashMap<u64, (ID3D12Resource, ID3D12DescriptorHeap)>,

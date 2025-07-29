@@ -1,6 +1,6 @@
 mod event;
 pub mod frame_data;
-pub mod gimslib;
+pub mod gpulib;
 pub mod running_state;
 pub mod swapchain;
 
@@ -21,7 +21,7 @@ use winit::{
 };
 
 use frame_data::FrameData;
-use gimslib::GPULib;
+use gpulib::GPULib;
 use running_state::RunningState;
 
 pub struct FrameResources<'a> {
