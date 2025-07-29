@@ -34,10 +34,9 @@ pub struct RunningState<T> {
 }
 
 impl<T: App> RunningState<T> {
-    pub fn new(window: Window, lib: GPULib, app: T) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn new(window: Window, lib: Arc<GPULib>, app: T) -> Result<Self, Box<dyn std::error::Error>> {
         let window = Arc::new(window);
         let window_size = window.inner_size();
-        let lib = Arc::new(lib);
         let swapchain = Swapchain::new(
             lib.clone(),
             window.clone(),
@@ -123,7 +122,7 @@ impl<T: App> RunningState<T> {
             viewport: self.swapchain.viewport,
             scissor: self.swapchain.scissor,
         };
-        self.app.draw(&self.lib, &frame_resources)?;
+        self.app.draw(&frame_resources)?;
         self.egui_renderer.draw(&self.lib, &frame_resources);
 
         unsafe {

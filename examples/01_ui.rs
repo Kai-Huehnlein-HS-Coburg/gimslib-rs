@@ -22,7 +22,6 @@ impl gimslib_rs::App for App {
 
     fn draw(
         &mut self,
-        _lib: &gimslib_rs::gpulib::GPULib,
         res: &FrameResources,
     ) -> Result<(), Box<dyn std::error::Error>> {
         unsafe {

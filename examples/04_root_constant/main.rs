@@ -1,4 +1,4 @@
-use std::mem::ManuallyDrop;
+use std::{mem::ManuallyDrop, sync::Arc};
 
 use gimslib_rs::{FrameResources, gpulib::GPULib};
 use windows::Win32::Graphics::{
@@ -13,9 +13,9 @@ struct App {
 }
 
 impl App {
-    fn new(lib: &GPULib) -> Self {
-        let root_signature = create_root_signature(lib).unwrap();
-        let pipeline = create_pipeline(lib, root_signature.clone()).unwrap();
+    fn new(lib: Arc<GPULib>) -> Self {
+        let root_signature = create_root_signature(&lib).unwrap();
+        let pipeline = create_pipeline(&lib, root_signature.clone()).unwrap();
         App {
             root_signature,
             pipeline,
@@ -175,7 +175,6 @@ impl gimslib_rs::App for App {
 
     fn draw(
         &mut self,
-        _lib: &gimslib_rs::gpulib::GPULib,
         res: &FrameResources,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let command_list = res.command_list;

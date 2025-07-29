@@ -5,7 +5,7 @@ pub mod gpulib;
 mod running_state;
 mod swapchain;
 
-use std::cell::OnceCell;
+use std::{cell::OnceCell, sync::Arc};
 
 use windows::{
     Win32::{
@@ -38,7 +38,6 @@ pub trait App {
     fn record_ui(&mut self, ctx: &egui::Context);
     fn draw(
         &mut self,
-        lib: &GPULib,
         frame_resources: &FrameResources,
     ) -> Result<(), Box<dyn std::error::Error>>;
 }
@@ -54,19 +53,19 @@ struct AppRunner<T, F> {
 impl<T, F> AppRunner<T, F>
 where
     T: App,
-    F: FnOnce(&GPULib) -> T,
+    F: FnOnce(Arc<GPULib>) -> T,
 {
     fn try_initialize_app(
         &mut self,
         event_loop: &ActiveEventLoop,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let window = event_loop.create_window(WindowAttributes::default())?;
-        let lib = GPULib::new()?;
+        let lib = Arc::new(GPULib::new()?);
         let app_creator = self
             .app_creator
             .take()
             .ok_or("Application cannot be initialized twice")?;
-        let app = (app_creator)(&lib);
+        let app = (app_creator)(lib.clone());
         let running_state = RunningState::new(window, lib, app)?;
 
         self.running_state
@@ -80,7 +79,7 @@ where
 impl<T, F> winit::application::ApplicationHandler for AppRunner<T, F>
 where
     T: App,
-    F: FnOnce(&GPULib) -> T,
+    F: FnOnce(Arc<GPULib>) -> T,
 {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         // Only create the running state once
@@ -128,7 +127,7 @@ where
 /// The app_creator function creates the user-defined application struct using a GPULib object,
 /// which contains the basic Direct3D 12 structs.
 pub fn run_app<T: App>(
-    app_creator: impl FnOnce(&GPULib) -> T,
+    app_creator: impl FnOnce(Arc<GPULib>) -> T,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let event_loop = EventLoop::new()?;
     event_loop.run_app(&mut AppRunner {

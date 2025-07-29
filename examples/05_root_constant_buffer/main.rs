@@ -1,4 +1,4 @@
-use std::mem::ManuallyDrop;
+use std::{mem::ManuallyDrop, sync::Arc};
 
 use gimslib_rs::{FrameResources, frame_data::FrameData, gpulib::GPULib};
 use nalgebra_glm::Mat4;
@@ -20,11 +20,11 @@ struct App {
 }
 
 impl App {
-    fn new(lib: &GPULib) -> Self {
-        let root_signature = create_root_signature(lib).unwrap();
-        let pipeline = create_pipeline(lib, root_signature.clone()).unwrap();
+    fn new(lib: Arc<GPULib>) -> Self {
+        let root_signature = create_root_signature(&lib).unwrap();
+        let pipeline = create_pipeline(&lib, root_signature.clone()).unwrap();
         let frame_data = FrameData::from_fn(2, |_| {
-            create_constant_buffer(lib, size_of::<PerFrameConstants>()).unwrap()
+            create_constant_buffer(&lib, size_of::<PerFrameConstants>()).unwrap()
         });
         let start_time = std::time::Instant::now();
 
@@ -240,7 +240,6 @@ impl gimslib_rs::App for App {
 
     fn draw(
         &mut self,
-        _lib: &gimslib_rs::gpulib::GPULib,
         res: &FrameResources,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let angle_radians = (std::time::Instant::now() - self.start_time).as_secs_f64()
