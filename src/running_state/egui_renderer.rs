@@ -18,6 +18,7 @@ use winit::{event::WindowEvent, window::Window};
 
 use crate::{
     FrameResources,
+    frame_data::FrameData,
     gpulib::GPULib,
     running_state::texture_manager::TextureManager,
     swapchain::Swapchain,
@@ -39,11 +40,10 @@ struct RootConstants {
     offset: [f32; 2],
 }
 
-/// Contains a record of resources which muct be deleted after a frame has completed
 #[derive(Default)]
-pub struct EguiFreeList {
-    textures: Vec<TextureId>,
-    buffers: Vec<ID3D12Resource>,
+struct EguiFrameData {
+    texture_free_queue: Vec<TextureId>,
+    meshes: Vec<EguiMesh>,
 }
 
 pub struct EguiRenderer {
@@ -53,18 +53,19 @@ pub struct EguiRenderer {
     window: Arc<Window>,
     viewport_info: egui::ViewportInfo,
     texture_manager: TextureManager,
-    meshes: Vec<EguiMesh>,
     // Current count of meshes to draw.
     // Old buffers will not get discarded in case the next draw needs less of them.
     draw_count: usize,
     root_signature: ID3D12RootSignature,
     pipeline: ID3D12PipelineState,
+    frame_data: FrameData<EguiFrameData>,
 }
 
 impl EguiRenderer {
     pub fn new(
         lib: Arc<GPULib>,
         swapchain: &Swapchain,
+        frame_count: usize,
     ) -> Result<Self, Box<dyn std::error::Error>> {
         let context = egui::Context::default();
 
@@ -85,6 +86,8 @@ impl EguiRenderer {
 
         let texture_manager = TextureManager::new(lib.clone())?;
 
+        let frame_data = FrameData::from_fn(frame_count, |_| EguiFrameData::default());
+
         Ok(EguiRenderer {
             context,
             egui_winit_state,
@@ -92,10 +95,10 @@ impl EguiRenderer {
             window: swapchain.window.clone(),
             viewport_info,
             texture_manager,
-            meshes: vec![],
             draw_count: 0,
             root_signature,
             pipeline,
+            frame_data,
         })
     }
 
@@ -106,12 +109,10 @@ impl EguiRenderer {
             .consumed
     }
 
-    /// Records the buffer state currently needed by the UI and applies it to the GPU.
-    /// `free_list` must be duplicated for every frame in flight, and should be initialized as it's default value.
+    /// Records the buffer state currently needed by the UI and applies it to the GPU buffers.
     pub fn record_and_apply(
         &mut self,
         ui_function: impl FnMut(&egui::Context),
-        free_list: &mut EguiFreeList,
     ) -> Result<(), Box<dyn std::error::Error>> {
         egui_winit::update_viewport_info(
             &mut self.viewport_info,
@@ -131,16 +132,16 @@ impl EguiRenderer {
             .context
             .tessellate(full_output.shapes, full_output.pixels_per_point);
 
-        let deleted_buffers = self.update_primitives(&primitives)?;
+        self.update_primitives(&primitives)?;
 
         let textures_delta = full_output.textures_delta;
 
-        self.texture_manager.free(&free_list.textures);
+        let frame_data = self.frame_data.get_current_mut();
+
+        self.texture_manager.free(&frame_data.texture_free_queue);
         self.texture_manager.set(&textures_delta.set)?;
 
-        free_list.textures = textures_delta.free;
-        free_list.buffers = deleted_buffers;
-
+        frame_data.texture_free_queue = textures_delta.free;
         Ok(())
     }
 
@@ -176,8 +177,8 @@ impl EguiRenderer {
                 0,
             );
         }
-        for draw_index in 0..self.draw_count {
-            let mesh = &self.meshes[draw_index];
+        let meshes = self.frame_data.get_current().meshes.as_slice();
+        for mesh in &meshes[0..self.draw_count] {
             let texture = self
                 .texture_manager
                 .get_descriptor_heap(mesh.texture)
@@ -197,13 +198,14 @@ impl EguiRenderer {
                 command_list.DrawIndexedInstanced(mesh.index_buffer.len() as u32, 1, 0, 0, 0);
             }
         }
+        self.frame_data.increment_frame();
     }
 
     fn update_primitives(
         &mut self,
         primitives: &[ClippedPrimitive],
-    ) -> Result<Vec<ID3D12Resource>, Box<dyn std::error::Error>> {
-        let mut deleted_resources = vec![];
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let meshes = &mut self.frame_data.get_current_mut().meshes;
         for (
             index,
             ClippedPrimitive {
@@ -216,7 +218,7 @@ impl EguiRenderer {
                 // Paint callbacks are not supported yet
                 continue;
             };
-            if self.meshes.len() < index + 1 {
+            if meshes.len() < index + 1 {
                 let index_buffer = VectorConstantBuffer::new(
                     self.lib.clone(),
                     mesh.indices.len(),
@@ -234,27 +236,19 @@ impl EguiRenderer {
                     continue;
                 };
 
-                self.meshes.push(EguiMesh {
+                meshes.push(EguiMesh {
                     index_buffer,
                     vertex_buffer,
                     texture,
                 });
             }
-            let egui_mesh = &mut self.meshes[index];
-            deleted_resources.extend(
-                egui_mesh
-                    .index_buffer
-                    .upload_deferred_delete(&mesh.indices)?,
-            );
-            deleted_resources.extend(
-                egui_mesh
-                    .vertex_buffer
-                    .upload_deferred_delete(&mesh.vertices)?,
-            );
+            let egui_mesh = &mut meshes[index];
+            egui_mesh.index_buffer.upload(&mesh.indices)?;
+            egui_mesh.vertex_buffer.upload(&mesh.vertices)?;
         }
         self.draw_count = primitives.len();
 
-        Ok(deleted_resources)
+        Ok(())
     }
 
     fn create_root_signature(

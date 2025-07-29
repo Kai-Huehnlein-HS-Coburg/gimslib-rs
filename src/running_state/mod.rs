@@ -12,7 +12,7 @@ use winit::window::Window;
 use crate::FrameData;
 use crate::GPULib;
 use crate::event::Event;
-use crate::running_state::egui_renderer::{EguiFreeList, EguiRenderer};
+use crate::running_state::egui_renderer::EguiRenderer;
 use crate::swapchain::Swapchain;
 use crate::{App, FrameResources};
 
@@ -21,7 +21,6 @@ pub struct RunningFrameData {
     command_list: ID3D12GraphicsCommandList10,
     fence: ID3D12Fence,
     event: Event,
-    free_list: EguiFreeList,
 }
 
 pub struct RunningState<T> {
@@ -72,11 +71,10 @@ impl<T: App> RunningState<T> {
                 command_list,
                 fence,
                 event,
-                free_list: EguiFreeList::default(),
             })
         })?;
 
-        let egui_renderer = EguiRenderer::new(lib.clone(), &swapchain)?;
+        let egui_renderer = EguiRenderer::new(lib.clone(), &swapchain, frame_count)?;
 
         Ok(RunningState {
             lib,
@@ -93,7 +91,6 @@ impl<T: App> RunningState<T> {
             command_list,
             fence,
             event,
-            free_list,
         } = self.frame_data.get_current_mut();
 
         unsafe {
@@ -103,7 +100,7 @@ impl<T: App> RunningState<T> {
             fence.Signal(0)?;
 
             self.egui_renderer
-                .record_and_apply(|ctx| self.app.record_ui(ctx), free_list)?;
+                .record_and_apply(|ctx| self.app.record_ui(ctx))?;
 
             command_allocator.Reset()?;
             command_list.Reset(&*command_allocator, None)?;
