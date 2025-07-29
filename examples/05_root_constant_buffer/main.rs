@@ -1,6 +1,6 @@
 use std::{mem::ManuallyDrop, sync::Arc};
 
-use gimslib_rs::{FrameResources, frame_data::FrameData, gpulib::GPULib};
+use gimslib_rs::{AppConfig, FrameResources, frame_data::FrameData, gpulib::GPULib};
 use nalgebra_glm::Mat4;
 use windows::Win32::Graphics::{
     Direct3D::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST, Direct3D12::*, Dxgi::Common::*,
@@ -238,10 +238,7 @@ impl gimslib_rs::App for App {
         });
     }
 
-    fn draw(
-        &mut self,
-        res: &FrameResources,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    fn draw(&mut self, res: &FrameResources) -> Result<(), Box<dyn std::error::Error>> {
         let angle_radians = (std::time::Instant::now() - self.start_time).as_secs_f64()
             % (2.0 * std::f64::consts::PI);
         let contents = PerFrameConstants {
@@ -274,5 +271,5 @@ impl gimslib_rs::App for App {
 }
 
 fn main() {
-    gimslib_rs::run_app(App::new).unwrap();
+    gimslib_rs::run_app(AppConfig::default(), App::new).unwrap();
 }

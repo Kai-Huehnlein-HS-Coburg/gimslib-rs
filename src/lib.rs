@@ -1,9 +1,9 @@
-pub mod vector_constant_buffer;
 mod event;
 pub mod frame_data;
 pub mod gpulib;
 mod running_state;
 mod swapchain;
+pub mod vector_constant_buffer;
 
 use std::{cell::OnceCell, sync::Arc};
 
@@ -36,10 +36,7 @@ pub struct FrameResources<'a> {
 
 pub trait App {
     fn record_ui(&mut self, ctx: &egui::Context);
-    fn draw(
-        &mut self,
-        frame_resources: &FrameResources,
-    ) -> Result<(), Box<dyn std::error::Error>>;
+    fn draw(&mut self, frame_resources: &FrameResources) -> Result<(), Box<dyn std::error::Error>>;
 }
 
 /// The winit application struct
@@ -48,6 +45,8 @@ struct AppRunner<T, F> {
     app_creator: Option<F>,
     /// The state of the application, which gets populated when the winit resume method is executed
     running_state: OnceCell<RunningState<T>>,
+    /// Settings like window title
+    app_config: AppConfig,
 }
 
 impl<T, F> AppRunner<T, F>
@@ -59,7 +58,9 @@ where
         &mut self,
         event_loop: &ActiveEventLoop,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let window = event_loop.create_window(WindowAttributes::default())?;
+        let window = event_loop.create_window(
+            WindowAttributes::default().with_title(self.app_config.window_title.as_str()),
+        )?;
         let lib = Arc::new(GPULib::new()?);
         let app_creator = self
             .app_creator
@@ -124,15 +125,29 @@ where
     }
 }
 
+pub struct AppConfig {
+    window_title: String,
+}
+
+impl Default for AppConfig {
+    fn default() -> Self {
+        AppConfig {
+            window_title: "gimslib-rs window".to_string(),
+        }
+    }
+}
+
 /// The app_creator function creates the user-defined application struct using a GPULib object,
 /// which contains the basic Direct3D 12 structs.
 pub fn run_app<T: App>(
+    app_config: AppConfig,
     app_creator: impl FnOnce(Arc<GPULib>) -> T,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let event_loop = EventLoop::new()?;
     event_loop.run_app(&mut AppRunner {
         app_creator: Some(app_creator),
         running_state: OnceCell::new(),
+        app_config,
     })?;
 
     Ok(())

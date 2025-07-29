@@ -34,7 +34,11 @@ pub struct RunningState<T> {
 }
 
 impl<T: App> RunningState<T> {
-    pub fn new(window: Window, lib: Arc<GPULib>, app: T) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn new(
+        window: Window,
+        lib: Arc<GPULib>,
+        app: T,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
         let window = Arc::new(window);
         let window_size = window.inner_size();
         let swapchain = Swapchain::new(

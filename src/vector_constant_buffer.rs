@@ -96,7 +96,7 @@ impl<T> VectorConstantBuffer<T> {
     pub fn len(&self) -> usize {
         self.current_len
     }
-    
+
     pub fn is_empty(&self) -> bool {
         self.current_len == 0
     }

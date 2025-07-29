@@ -73,12 +73,9 @@ impl TextureManager {
                 .entry(*id)
                 .or_insert_with(|| {
                     new_resource = true;
-                    let texture = Self::create_texture(
-                        &self.lib,
-                        width,
-                        delta.image.height() as u32,
-                    )
-                    .unwrap();
+                    let texture =
+                        Self::create_texture(&self.lib, width, delta.image.height() as u32)
+                            .unwrap();
                     let heap = Self::create_heap_for_texture(&self.lib, &texture).unwrap();
                     (texture, heap)
                 })

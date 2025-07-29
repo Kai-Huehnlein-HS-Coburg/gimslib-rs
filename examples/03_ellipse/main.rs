@@ -1,6 +1,6 @@
 use std::{mem::ManuallyDrop, sync::Arc};
 
-use gimslib_rs::{FrameResources, gpulib::GPULib};
+use gimslib_rs::{AppConfig, FrameResources, gpulib::GPULib};
 use windows::Win32::Graphics::{
     Direct3D::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST, Direct3D12::*, Dxgi::Common::*,
 };
@@ -155,10 +155,7 @@ impl gimslib_rs::App for App {
         });
     }
 
-    fn draw(
-        &mut self,
-        res: &FrameResources,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    fn draw(&mut self, res: &FrameResources) -> Result<(), Box<dyn std::error::Error>> {
         let command_list = res.command_list;
         unsafe {
             command_list.ClearRenderTargetView(
@@ -179,5 +176,5 @@ impl gimslib_rs::App for App {
 }
 
 fn main() {
-    gimslib_rs::run_app(App::new).unwrap();
+    gimslib_rs::run_app(AppConfig::default(), App::new).unwrap();
 }

@@ -1,13 +1,16 @@
 use std::{mem::ManuallyDrop, sync::Arc};
 
 use gimslib_rs::{
-    FrameResources,
+    AppConfig, FrameResources,
     gpulib::GPULib,
     vector_constant_buffer::{BufferLocation, VectorConstantBuffer},
 };
-use windows::{core::s, Win32::Graphics::{
-    Direct3D::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST, Direct3D12::*, Dxgi::Common::*,
-}};
+use windows::{
+    Win32::Graphics::{
+        Direct3D::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST, Direct3D12::*, Dxgi::Common::*,
+    },
+    core::s,
+};
 
 #[allow(dead_code)] // Only needed beause vertices are never read by the CPU
 #[derive(Clone)] // Uploading to VectorConstantBuffer requires `Clone` trait
@@ -229,5 +232,5 @@ impl gimslib_rs::App for App {
 }
 
 fn main() {
-    gimslib_rs::run_app(App::new).unwrap();
+    gimslib_rs::run_app(AppConfig::default(), App::new).unwrap();
 }

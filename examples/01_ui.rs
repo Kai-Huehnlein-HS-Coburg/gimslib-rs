@@ -1,4 +1,4 @@
-use gimslib_rs::FrameResources;
+use gimslib_rs::{AppConfig, FrameResources};
 
 struct App {
     clear_color: [f32; 4],
@@ -20,10 +20,7 @@ impl gimslib_rs::App for App {
         });
     }
 
-    fn draw(
-        &mut self,
-        res: &FrameResources,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    fn draw(&mut self, res: &FrameResources) -> Result<(), Box<dyn std::error::Error>> {
         unsafe {
             res.command_list.ClearRenderTargetView(
                 res.render_target_handle_srgb,
@@ -36,5 +33,5 @@ impl gimslib_rs::App for App {
 }
 
 fn main() {
-    gimslib_rs::run_app(|_| App::default()).unwrap();
+    gimslib_rs::run_app(AppConfig::default(), |_| App::default()).unwrap();
 }
