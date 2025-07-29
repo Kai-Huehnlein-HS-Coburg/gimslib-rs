@@ -4,7 +4,6 @@ mod texture_manager;
 use std::mem::ManuallyDrop;
 use std::sync::Arc;
 
-use egui::TextureId;
 use windows::Win32::Graphics::{Direct3D12::*, Dxgi::*};
 use windows::core::Interface;
 use winit::event::WindowEvent;
@@ -13,7 +12,7 @@ use winit::window::Window;
 use crate::FrameData;
 use crate::GPULib;
 use crate::event::Event;
-use crate::running_state::egui_renderer::EguiRenderer;
+use crate::running_state::egui_renderer::{EguiFreeList, EguiRenderer};
 use crate::swapchain::Swapchain;
 use crate::{App, FrameResources};
 
@@ -22,7 +21,7 @@ pub struct RunningFrameData {
     command_list: ID3D12GraphicsCommandList10,
     fence: ID3D12Fence,
     event: Event,
-    free_list: Vec<TextureId>,
+    free_list: EguiFreeList,
 }
 
 pub struct RunningState<T> {
@@ -49,7 +48,7 @@ impl<T: App> RunningState<T> {
             3,
         )?;
 
-        let frame_data = FrameData::try_from_fn(1, |_| {
+        let frame_data = FrameData::try_from_fn(2, |_| {
             let command_allocator = unsafe {
                 lib.device
                     .CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT)
@@ -72,7 +71,7 @@ impl<T: App> RunningState<T> {
                 command_list,
                 fence,
                 event,
-                free_list: vec![],
+                free_list: EguiFreeList::default(),
             })
         })?;
 
@@ -102,6 +101,9 @@ impl<T: App> RunningState<T> {
             event.wait()?;
             fence.Signal(0)?;
 
+            self.egui_renderer
+                .record_and_apply(|ctx| self.app.record_ui(ctx), free_list)?;
+
             command_allocator.Reset()?;
             command_list.Reset(&*command_allocator, None)?;
 
@@ -111,9 +113,6 @@ impl<T: App> RunningState<T> {
                 D3D12_RESOURCE_STATE_RENDER_TARGET,
             )]);
         }
-
-        self.egui_renderer.record(|ctx| self.app.record_ui(ctx))?;
-        *free_list = self.egui_renderer.apply_texture_delta(free_list)?;
 
         let (render_target_handle, render_target_handle_srgb) =
             self.swapchain.current_render_target_handle();

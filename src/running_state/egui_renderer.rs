@@ -1,5 +1,5 @@
 use egui::{
-    ClippedPrimitive, TextureId, TexturesDelta,
+    ClippedPrimitive, TextureId,
     epaint::{Primitive, Vertex},
 };
 use std::{ffi::c_void, mem::ManuallyDrop, sync::Arc};
@@ -39,6 +39,13 @@ struct RootConstants {
     offset: [f32; 2],
 }
 
+/// Contains a record of resources which muct be deleted after a frame has completed
+#[derive(Default)]
+pub struct EguiFreeList {
+    textures: Vec<TextureId>,
+    buffers: Vec<ID3D12Resource>,
+}
+
 pub struct EguiRenderer {
     context: egui::Context,
     egui_winit_state: egui_winit::State,
@@ -46,8 +53,6 @@ pub struct EguiRenderer {
     window: Arc<Window>,
     viewport_info: egui::ViewportInfo,
     texture_manager: TextureManager,
-    // Output from this frame
-    textures_delta: TexturesDelta,
     meshes: Vec<EguiMesh>,
     // Current count of meshes to draw.
     // Old buffers will not get discarded in case the next draw needs less of them.
@@ -87,7 +92,6 @@ impl EguiRenderer {
             window: swapchain.window.clone(),
             viewport_info,
             texture_manager,
-            textures_delta: TexturesDelta::default(),
             meshes: vec![],
             draw_count: 0,
             root_signature,
@@ -102,9 +106,12 @@ impl EguiRenderer {
             .consumed
     }
 
-    pub fn record(
+    /// Records the buffer state currently needed by the UI and applies it to the GPU.
+    /// `free_list` must be duplicated for every frame in flight, and should be initialized as it's default value.
+    pub fn record_and_apply(
         &mut self,
         ui_function: impl FnMut(&egui::Context),
+        free_list: &mut EguiFreeList,
     ) -> Result<(), Box<dyn std::error::Error>> {
         egui_winit::update_viewport_info(
             &mut self.viewport_info,
@@ -124,22 +131,17 @@ impl EguiRenderer {
             .context
             .tessellate(full_output.shapes, full_output.pixels_per_point);
 
-        self.update_primitives(&primitives)?;
+        let deleted_buffers = self.update_primitives(&primitives)?;
 
-        self.textures_delta = full_output.textures_delta;
+        let textures_delta = full_output.textures_delta;
+
+        self.texture_manager.free(&free_list.textures);
+        self.texture_manager.set(&textures_delta.set)?;
+
+        free_list.textures = textures_delta.free;
+        free_list.buffers = deleted_buffers;
 
         Ok(())
-    }
-
-    /// Creates, updates, and deletes the needed textures.
-    /// `free_list` must be set to the return value of this function from the last completed frame.
-    pub fn apply_texture_delta(
-        &mut self,
-        free_list: &[TextureId],
-    ) -> Result<Vec<TextureId>, Box<dyn std::error::Error>> {
-        self.texture_manager.free(free_list);
-        self.texture_manager.set(&self.textures_delta.set)?;
-        Ok(std::mem::take(&mut self.textures_delta.free))
     }
 
     pub fn draw(
@@ -200,7 +202,8 @@ impl EguiRenderer {
     fn update_primitives(
         &mut self,
         primitives: &[ClippedPrimitive],
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<Vec<ID3D12Resource>, Box<dyn std::error::Error>> {
+        let mut deleted_resources = vec![];
         for (
             index,
             ClippedPrimitive {
@@ -218,11 +221,13 @@ impl EguiRenderer {
                     self.lib.clone(),
                     mesh.indices.len(),
                     BufferLocation::GpuUpload,
+                    Some("Egui index Buffer".to_string()),
                 )?;
                 let vertex_buffer = VectorConstantBuffer::new(
                     self.lib.clone(),
                     mesh.vertices.len(),
                     BufferLocation::GpuUpload,
+                    Some("Egui vertex Buffer".to_string()),
                 )?;
                 let egui::TextureId::Managed(texture) = mesh.texture_id else {
                     // User textures are not supported yet
@@ -236,12 +241,20 @@ impl EguiRenderer {
                 });
             }
             let egui_mesh = &mut self.meshes[index];
-            egui_mesh.index_buffer.upload(&mesh.indices)?;
-            egui_mesh.vertex_buffer.upload(&mesh.vertices)?;
+            deleted_resources.extend(
+                egui_mesh
+                    .index_buffer
+                    .upload_deferred_delete(&mesh.indices)?,
+            );
+            deleted_resources.extend(
+                egui_mesh
+                    .vertex_buffer
+                    .upload_deferred_delete(&mesh.vertices)?,
+            );
         }
         self.draw_count = primitives.len();
 
-        Ok(())
+        Ok(deleted_resources)
     }
 
     fn create_root_signature(

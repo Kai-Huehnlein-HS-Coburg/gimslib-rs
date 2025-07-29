@@ -4,7 +4,7 @@ use std::ptr::null_mut;
 use std::{collections::HashMap, sync::Arc};
 use windows::Win32::Graphics::Direct3D12::*;
 use windows::Win32::Graphics::Dxgi::Common::{DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_UNKNOWN};
-use windows::core::Interface;
+use windows::core::{HSTRING, Interface};
 
 use crate::gpulib::GPULib;
 
@@ -219,7 +219,11 @@ impl TextureManager {
             )
         }?;
 
-        resource_option.ok_or("Failed to create texture resource".into())
+        let resource: ID3D12Resource =
+            resource_option.ok_or("Failed to create texture resource")?;
+        unsafe { resource.SetName(&HSTRING::from("Egui texture")) }?;
+
+        Ok(resource)
     }
 
     fn create_upload_buffer(

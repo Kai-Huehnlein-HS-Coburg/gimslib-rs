@@ -31,7 +31,7 @@ impl App {
         let root_signature = create_root_signature(&lib).unwrap();
         let pipeline = create_pipeline(&lib, root_signature.clone()).unwrap();
         let mut vertex_buffer =
-            VectorConstantBuffer::new(lib.clone(), 3, BufferLocation::GpuUpload).unwrap();
+            VectorConstantBuffer::new(lib.clone(), 3, BufferLocation::GpuUpload, None).unwrap();
         vertex_buffer
             .upload(&[
                 Vertex {
@@ -46,7 +46,7 @@ impl App {
             ])
             .unwrap();
         let mut index_buffer =
-            VectorConstantBuffer::new(lib.clone(), 3, BufferLocation::GpuUpload).unwrap();
+            VectorConstantBuffer::new(lib.clone(), 3, BufferLocation::GpuUpload, None).unwrap();
         index_buffer.upload(&[0, 1, 2]).unwrap();
 
         App {

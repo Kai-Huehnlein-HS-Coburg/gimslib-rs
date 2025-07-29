@@ -1,8 +1,11 @@
 use std::{ops::Deref, sync::Arc};
 
-use windows::Win32::Graphics::{
-    Direct3D12::*,
-    Dxgi::Common::{DXGI_FORMAT, DXGI_FORMAT_UNKNOWN},
+use windows::{
+    Win32::Graphics::{
+        Direct3D12::*,
+        Dxgi::Common::{DXGI_FORMAT, DXGI_FORMAT_UNKNOWN},
+    },
+    core::HSTRING,
 };
 
 use crate::gpulib::GPULib;
@@ -24,6 +27,7 @@ pub struct VectorConstantBuffer<T> {
     max_size: usize,
     current_len: usize,
     location: BufferLocation,
+    name: Option<String>,
     data_type: std::marker::PhantomData<T>,
 }
 
@@ -35,8 +39,9 @@ impl<T> VectorConstantBuffer<T> {
         lib: Arc<GPULib>,
         initial_size: usize,
         location: BufferLocation,
+        name: Option<String>,
     ) -> Result<Self, Box<dyn std::error::Error>> {
-        let resource = Self::create_resource(&lib, initial_size, location)?;
+        let resource = Self::create_resource(&lib, initial_size, location, &name)?;
 
         Ok(VectorConstantBuffer {
             lib,
@@ -44,6 +49,7 @@ impl<T> VectorConstantBuffer<T> {
             max_size: initial_size,
             current_len: 0,
             location,
+            name,
             data_type: std::marker::PhantomData,
         })
     }
@@ -52,6 +58,7 @@ impl<T> VectorConstantBuffer<T> {
         lib: &GPULib,
         count: usize,
         location: BufferLocation,
+        name: &Option<String>,
     ) -> Result<ID3D12Resource, Box<dyn std::error::Error>> {
         let heap_properties = D3D12_HEAP_PROPERTIES {
             Type: match location {
@@ -89,7 +96,14 @@ impl<T> VectorConstantBuffer<T> {
             )
         }?;
 
-        resource_option.ok_or("Failed to create resource for vector constant buffer".into())
+        let resource: ID3D12Resource =
+            resource_option.ok_or("Failed to create resource for vector constant buffer")?;
+
+        if let Some(name) = name {
+            unsafe { resource.SetName(&HSTRING::from(name)) }?;
+        }
+
+        Ok(resource)
     }
 
     /// The number of items currently stored in the buffer
@@ -125,9 +139,23 @@ impl<T> VectorConstantBuffer<T> {
 impl<T: Clone> VectorConstantBuffer<T> {
     /// Copy new data into the buffer
     pub fn upload(&mut self, data: &[T]) -> Result<(), Box<dyn std::error::Error>> {
-        if self.max_size < data.len() {
-            self.resource = Self::create_resource(&self.lib, data.len(), self.location)?;
-        }
+        self.upload_deferred_delete(data)?;
+        Ok(())
+    }
+
+    /// Copy new data into the buffer while returning the potentially discarded previous buffer.
+    /// Useful for delete queues tied to frames in flight.
+    pub fn upload_deferred_delete(
+        &mut self,
+        data: &[T],
+    ) -> Result<Option<ID3D12Resource>, Box<dyn std::error::Error>> {
+        let deleted_resource = if self.max_size < data.len() {
+            let new_resource =
+                Self::create_resource(&self.lib, data.len(), self.location, &self.name)?;
+            Some(std::mem::replace(&mut self.resource, new_resource))
+        } else {
+            None
+        };
         self.current_len = data.len();
 
         unsafe {
@@ -138,7 +166,7 @@ impl<T: Clone> VectorConstantBuffer<T> {
             self.resource.Unmap(0, None);
         }
 
-        Ok(())
+        Ok(deleted_resource)
     }
 }
 
