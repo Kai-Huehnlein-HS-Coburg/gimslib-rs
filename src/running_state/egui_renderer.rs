@@ -217,12 +217,12 @@ impl EguiRenderer {
                 let index_buffer = VectorConstantBuffer::new(
                     self.lib.clone(),
                     mesh.indices.len(),
-                    BufferLocation::GPU,
+                    BufferLocation::GpuUpload,
                 )?;
                 let vertex_buffer = VectorConstantBuffer::new(
                     self.lib.clone(),
                     mesh.vertices.len(),
-                    BufferLocation::GPU,
+                    BufferLocation::GpuUpload,
                 )?;
                 let egui::TextureId::Managed(texture) = mesh.texture_id else {
                     // User textures are not supported yet

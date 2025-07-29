@@ -9,10 +9,15 @@ use crate::gpulib::GPULib;
 
 #[derive(Debug, Clone, Copy)]
 pub enum BufferLocation {
-    CPU,
-    GPU,
+    /// CPU memory, mapping is possible
+    Cpu,
+    /// GPU memory, mapping is possible. Only usable on modern graphics cards with ResizableBAR.
+    GpuUpload,
 }
 
+/// Direct3D 12 buffer which is automatically resized to fit the data written to it.
+/// It will never shrink automatically, so smaller future writes happen immediately
+/// without a new allocation. It dereferences to it's internal `ID3D12Resource`.
 pub struct VectorConstantBuffer<T> {
     lib: Arc<GPULib>,
     resource: ID3D12Resource,
@@ -23,6 +28,9 @@ pub struct VectorConstantBuffer<T> {
 }
 
 impl<T> VectorConstantBuffer<T> {
+    /// Constructs a new `VectorConstantBuffer<T>`.
+    /// `initial_size` specifies the number of items for which space is reserved. This does not affect the reported length.
+    /// `location` specifies whether the buffer is located in GPU or CPU memory.
     pub fn new(
         lib: Arc<GPULib>,
         initial_size: usize,
@@ -47,8 +55,8 @@ impl<T> VectorConstantBuffer<T> {
     ) -> Result<ID3D12Resource, Box<dyn std::error::Error>> {
         let heap_properties = D3D12_HEAP_PROPERTIES {
             Type: match location {
-                BufferLocation::CPU => D3D12_HEAP_TYPE_UPLOAD,
-                BufferLocation::GPU => D3D12_HEAP_TYPE_GPU_UPLOAD,
+                BufferLocation::Cpu => D3D12_HEAP_TYPE_UPLOAD,
+                BufferLocation::GpuUpload => D3D12_HEAP_TYPE_GPU_UPLOAD,
             },
             ..Default::default()
         };
@@ -84,10 +92,17 @@ impl<T> VectorConstantBuffer<T> {
         resource_option.ok_or("Failed to create resource for vector constant buffer".into())
     }
 
+    /// The number of items currently stored in the buffer
     pub fn len(&self) -> usize {
         self.current_len
     }
+    
+    pub fn is_empty(&self) -> bool {
+        self.current_len == 0
+    }
 
+    /// Creates a `D3D12_VERTEX_BUFFER_VIEW` for the internal `ID3D12Resource`, spanning the buffer's entire current length.
+    /// Stride is set to the size of the buffer's type.
     pub fn vertex_buffer_view(&self) -> D3D12_VERTEX_BUFFER_VIEW {
         D3D12_VERTEX_BUFFER_VIEW {
             BufferLocation: unsafe { self.resource.GetGPUVirtualAddress() },
@@ -96,6 +111,8 @@ impl<T> VectorConstantBuffer<T> {
         }
     }
 
+    /// Creates a `D3D12_INDEX_BUFFER_VIEW` for the internal `ID3D12Resource` with the specified format,
+    /// spanning the buffer's entire current length.
     pub fn index_buffer_view(&self, format: DXGI_FORMAT) -> D3D12_INDEX_BUFFER_VIEW {
         D3D12_INDEX_BUFFER_VIEW {
             BufferLocation: unsafe { self.resource.GetGPUVirtualAddress() },
@@ -106,6 +123,7 @@ impl<T> VectorConstantBuffer<T> {
 }
 
 impl<T: Clone> VectorConstantBuffer<T> {
+    /// Copy new data into the buffer
     pub fn upload(&mut self, data: &[T]) -> Result<(), Box<dyn std::error::Error>> {
         if self.max_size < data.len() {
             self.resource = Self::create_resource(&self.lib, data.len(), self.location)?;
