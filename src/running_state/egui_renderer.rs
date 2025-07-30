@@ -21,7 +21,6 @@ use crate::{
     frame_data::FrameData,
     gpulib::GPULib,
     running_state::texture_manager::TextureManager,
-    swapchain::Swapchain,
     vector_constant_buffer::{BufferLocation, VectorConstantBuffer},
 };
 
@@ -64,7 +63,7 @@ pub struct EguiRenderer {
 impl EguiRenderer {
     pub fn new(
         lib: Arc<GPULib>,
-        swapchain: &Swapchain,
+        window: Arc<Window>,
         frame_count: usize,
     ) -> Result<Self, Box<dyn std::error::Error>> {
         let context = egui::Context::default();
@@ -72,14 +71,14 @@ impl EguiRenderer {
         let egui_winit_state = egui_winit::State::new(
             context.clone(),
             egui::ViewportId::ROOT,
-            &swapchain.window,
-            Some(swapchain.window.scale_factor() as f32),
-            swapchain.window.theme(),
+            &window,
+            Some(window.scale_factor() as f32),
+            window.theme(),
             Some(16384),
         );
 
         let mut viewport_info = egui::ViewportInfo::default();
-        egui_winit::update_viewport_info(&mut viewport_info, &context, &swapchain.window, true);
+        egui_winit::update_viewport_info(&mut viewport_info, &context, &window, true);
 
         let root_signature = Self::create_root_signature(&lib)?;
         let pipeline = Self::create_pipeline(&lib, root_signature.clone())?;
@@ -99,7 +98,7 @@ impl EguiRenderer {
             context,
             egui_winit_state,
             lib,
-            window: swapchain.window.clone(),
+            window,
             viewport_info,
             texture_manager,
             draw_count: 0,

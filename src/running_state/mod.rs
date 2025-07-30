@@ -1,4 +1,6 @@
 mod egui_renderer;
+mod event;
+mod swapchain;
 mod texture_manager;
 
 use std::mem::ManuallyDrop;
@@ -11,9 +13,9 @@ use winit::window::Window;
 
 use crate::FrameData;
 use crate::GPULib;
-use crate::event::Event;
 use crate::running_state::egui_renderer::EguiRenderer;
-use crate::swapchain::Swapchain;
+use crate::running_state::event::Event;
+use crate::running_state::swapchain::Swapchain;
 use crate::{App, FrameResources};
 
 pub struct RunningFrameData {
@@ -74,7 +76,7 @@ impl<T: App> RunningState<T> {
             })
         })?;
 
-        let egui_renderer = EguiRenderer::new(lib.clone(), &swapchain, frame_count)?;
+        let egui_renderer = EguiRenderer::new(lib.clone(), window, frame_count)?;
 
         Ok(RunningState {
             lib,
