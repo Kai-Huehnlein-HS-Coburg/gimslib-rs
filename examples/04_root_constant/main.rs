@@ -92,73 +92,36 @@ fn create_pipeline(
         return Err("Failed to sign pixel shader".into());
     }
 
-    let pipeline_desc = D3D12_GRAPHICS_PIPELINE_STATE_DESC {
-        pRootSignature: ManuallyDrop::new(Some(root_signature)),
-        VS: D3D12_SHADER_BYTECODE {
-            pShaderBytecode: vertex_shader.as_ptr() as _,
-            BytecodeLength: vertex_shader.len(),
-        },
-        PS: D3D12_SHADER_BYTECODE {
-            pShaderBytecode: pixel_shader.as_ptr() as _,
-            BytecodeLength: pixel_shader.len(),
-        },
-        RasterizerState: D3D12_RASTERIZER_DESC {
-            FillMode: D3D12_FILL_MODE_SOLID,
-            CullMode: D3D12_CULL_MODE_NONE,
-            FrontCounterClockwise: false.into(),
-            DepthBias: D3D12_DEFAULT_DEPTH_BIAS,
-            DepthBiasClamp: D3D12_DEFAULT_DEPTH_BIAS_CLAMP,
-            SlopeScaledDepthBias: D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS,
-            DepthClipEnable: true.into(),
-            MultisampleEnable: false.into(),
-            AntialiasedLineEnable: false.into(),
-            ForcedSampleCount: 0,
-            ConservativeRaster: D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF,
-        },
-        BlendState: D3D12_BLEND_DESC {
-            AlphaToCoverageEnable: false.into(),
-            IndependentBlendEnable: false.into(),
-            RenderTarget: [
-                D3D12_RENDER_TARGET_BLEND_DESC {
-                    BlendEnable: false.into(),
-                    LogicOpEnable: false.into(),
-                    SrcBlend: D3D12_BLEND_ONE,
-                    DestBlend: D3D12_BLEND_ZERO,
-                    BlendOp: D3D12_BLEND_OP_ADD,
-                    SrcBlendAlpha: D3D12_BLEND_ONE,
-                    DestBlendAlpha: D3D12_BLEND_ZERO,
-                    BlendOpAlpha: D3D12_BLEND_OP_ADD,
-                    RenderTargetWriteMask: 0b1111,
-                    ..Default::default()
-                },
-                D3D12_RENDER_TARGET_BLEND_DESC::default(),
-                D3D12_RENDER_TARGET_BLEND_DESC::default(),
-                D3D12_RENDER_TARGET_BLEND_DESC::default(),
-                D3D12_RENDER_TARGET_BLEND_DESC::default(),
-                D3D12_RENDER_TARGET_BLEND_DESC::default(),
-                D3D12_RENDER_TARGET_BLEND_DESC::default(),
-                D3D12_RENDER_TARGET_BLEND_DESC::default(),
-            ],
-        },
-        SampleMask: u32::MAX,
-        PrimitiveTopologyType: D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,
-        NumRenderTargets: 1,
-        SampleDesc: DXGI_SAMPLE_DESC {
-            Count: 1,
-            Quality: 0,
-        },
-        RTVFormats: [
-            DXGI_FORMAT_R8G8B8A8_UNORM,
-            DXGI_FORMAT_UNKNOWN,
-            DXGI_FORMAT_UNKNOWN,
-            DXGI_FORMAT_UNKNOWN,
-            DXGI_FORMAT_UNKNOWN,
-            DXGI_FORMAT_UNKNOWN,
-            DXGI_FORMAT_UNKNOWN,
-            DXGI_FORMAT_UNKNOWN,
-        ],
-        ..Default::default()
+    let mut pipeline_desc = D3D12_GRAPHICS_PIPELINE_STATE_DESC::default();
+    pipeline_desc.pRootSignature = ManuallyDrop::new(Some(root_signature));
+    pipeline_desc.VS = D3D12_SHADER_BYTECODE {
+        pShaderBytecode: vertex_shader.as_ptr() as _,
+        BytecodeLength: vertex_shader.len(),
     };
+    pipeline_desc.PS = D3D12_SHADER_BYTECODE {
+        pShaderBytecode: pixel_shader.as_ptr() as _,
+        BytecodeLength: pixel_shader.len(),
+    };
+    pipeline_desc.RasterizerState = D3D12_RASTERIZER_DESC {
+        FillMode: D3D12_FILL_MODE_SOLID,
+        CullMode: D3D12_CULL_MODE_NONE,
+        FrontCounterClockwise: false.into(),
+        DepthBias: D3D12_DEFAULT_DEPTH_BIAS,
+        DepthBiasClamp: D3D12_DEFAULT_DEPTH_BIAS_CLAMP,
+        SlopeScaledDepthBias: D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS,
+        DepthClipEnable: true.into(),
+        MultisampleEnable: false.into(),
+        AntialiasedLineEnable: false.into(),
+        ForcedSampleCount: 0,
+        ConservativeRaster: D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF,
+    };
+    pipeline_desc.BlendState.RenderTarget[0].RenderTargetWriteMask = 0b1111;
+    pipeline_desc.SampleMask = u32::MAX;
+    pipeline_desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+    pipeline_desc.NumRenderTargets = 1;
+    pipeline_desc.SampleDesc.Count = 1;
+    pipeline_desc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+
     let pipeline = unsafe { lib.device.CreateGraphicsPipelineState(&pipeline_desc)? };
 
     Ok(pipeline)
