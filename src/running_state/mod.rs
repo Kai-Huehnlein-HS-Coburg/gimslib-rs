@@ -188,3 +188,13 @@ fn transition(
         ..Default::default()
     }
 }
+
+impl<T> Drop for RunningState<T> {
+    fn drop(&mut self) {
+        // Wait for all frames to finish
+        self.frame_data.for_each_frame(|frame| unsafe {
+            frame.fence.SetEventOnCompletion(1, *frame.event).unwrap();
+            frame.event.wait().unwrap();
+        });
+    }
+}

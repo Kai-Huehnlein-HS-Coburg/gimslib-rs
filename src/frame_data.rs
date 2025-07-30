@@ -38,9 +38,7 @@ impl<T> FrameData<T> {
             frame_datas: (0..frame_count).map(init_fn).collect::<Result<_, _>>()?,
         })
     }
-}
 
-impl<T> FrameData<T> {
     pub fn increment_frame(&self) {
         self.current_frame
             .set((self.current_frame.get() + 1) % self.frame_datas.len());
@@ -52,5 +50,12 @@ impl<T> FrameData<T> {
 
     pub fn get_current_mut(&mut self) -> &mut T {
         &mut self.frame_datas[self.current_frame.get()]
+    }
+
+    pub fn for_each_frame(&mut self, function: impl Fn(&mut T)) {
+        for frame_from_zero in 0..self.frame_datas.len() {
+            let frame = (self.current_frame.get() + frame_from_zero) % self.frame_datas.len();
+            function(&mut self.frame_datas[frame]);
+        }
     }
 }
