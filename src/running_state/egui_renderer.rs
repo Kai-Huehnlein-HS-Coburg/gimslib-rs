@@ -12,7 +12,7 @@ use windows::{
             DXGI_FORMAT_UNKNOWN, DXGI_SAMPLE_DESC,
         },
     },
-    core::s,
+    core::{h, s},
 };
 use winit::{event::WindowEvent, window::Window};
 
@@ -87,6 +87,13 @@ impl EguiRenderer {
         let texture_manager = TextureManager::new(lib.clone())?;
 
         let frame_data = FrameData::from_fn(frame_count, |_| EguiFrameData::default());
+
+        unsafe {
+            pipeline.SetName(h!("Egui renderer pipeline")).unwrap();
+            root_signature
+                .SetName(h!("Egui renderer root signature"))
+                .unwrap();
+        }
 
         Ok(EguiRenderer {
             context,

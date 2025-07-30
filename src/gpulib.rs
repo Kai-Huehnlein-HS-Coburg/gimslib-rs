@@ -1,9 +1,12 @@
-use windows::Win32::Graphics::{Direct3D::*, Direct3D12::*, Dxgi::*};
+use windows::{
+    Win32::Graphics::{Direct3D::*, Direct3D12::*, Dxgi::*},
+    core::h,
+};
 
 pub struct GPULib {
-    pub factory: IDXGIFactory7,
-    pub device: ID3D12Device9,
     pub queue: ID3D12CommandQueue,
+    pub device: ID3D12Device9,
+    pub factory: IDXGIFactory7,
 }
 
 impl GPULib {
@@ -69,6 +72,11 @@ impl GPULib {
             };
             device.CreateCommandQueue(&desc)
         }?;
+
+        unsafe {
+            device.SetName(h!("Gimslib main device")).unwrap();
+            queue.SetName(h!("Gimslib main queue")).unwrap();
+        }
 
         Ok(GPULib {
             factory,

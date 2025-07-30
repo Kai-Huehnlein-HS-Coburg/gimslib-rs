@@ -4,7 +4,7 @@ use windows::Win32::Foundation::{HWND, RECT};
 use windows::Win32::Graphics::Direct3D12::*;
 use windows::Win32::Graphics::Dxgi::Common::*;
 use windows::Win32::Graphics::Dxgi::*;
-use windows::core::Interface;
+use windows::core::{HSTRING, Interface};
 use winit::{
     raw_window_handle::{HasWindowHandle, RawWindowHandle},
     window::Window,
@@ -87,7 +87,8 @@ impl Swapchain {
 
         let render_targets: Vec<ID3D12Resource> = (0..frame_count as usize)
             .map(|frame| {
-                let render_target = unsafe { swapchain.GetBuffer(frame.try_into()?) }?;
+                let render_target: ID3D12Resource =
+                    unsafe { swapchain.GetBuffer(frame.try_into()?) }?;
 
                 unsafe {
                     lib.device.CreateRenderTargetView(
@@ -117,6 +118,9 @@ impl Swapchain {
                                 + frame * rtv_descriptor_size as usize,
                         },
                     );
+
+                    render_target
+                        .SetName(&HSTRING::from(format!("Gimslib render target {}", frame)))?;
                 }
 
                 Ok(render_target)
