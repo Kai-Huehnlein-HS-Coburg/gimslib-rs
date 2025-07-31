@@ -11,6 +11,7 @@ use winit::{
 };
 
 use crate::GPULib;
+use crate::running_state::event::Event;
 
 pub struct Swapchain {
     pub render_target_heap: ID3D12DescriptorHeap,
@@ -200,8 +201,11 @@ impl Drop for Swapchain {
                 .device
                 .CreateFence(0, D3D12_FENCE_FLAG_NONE)
                 .unwrap();
+            let event = Event::new(false).unwrap();
+
             self.lib.queue.Signal(&fence, 1).unwrap();
-            self.lib.queue.Wait(&fence, 1).unwrap();
+            fence.SetEventOnCompletion(1, *event).unwrap();
+            event.wait().unwrap();
         }
     }
 }
